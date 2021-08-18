@@ -1,0 +1,27 @@
+- hosts: all
+  become: yes
+
+  tasks:
+    - name: Add GlusterFS Repository
+      apt_repository:
+        repo: ppa:gluster/glusterfs-7
+
+    - name: Install the prerequisite packeage
+      apt:
+        name: "{{ packages }}"
+        state: present
+        update_cache: yes
+      vars:
+        packages:
+        - software-properties-common
+        - thin-provisioning-tools
+        - glusterfs-server
+        - glusterfs-client
+
+    - name: cp ssh-key
+      template:
+        src:  /vagrant/ssh/id_rsa.pub
+        dest: /root/.ssh/authorized_keys
+        mode: '0600'
+        owner: root
+        group: root

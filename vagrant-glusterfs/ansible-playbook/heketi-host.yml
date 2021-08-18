@@ -1,0 +1,84 @@
+- hosts: heketi
+  connection: local
+  become: yes
+
+  ## https://github.com/heketi/heketi/releases
+  vars:
+    - heketi_url: https://github.com/heketi/heketi/releases/download/v9.0.0/
+    - heketi_tar: heketi-v9.0.0.linux.amd64.tar.gz
+
+  tasks:
+    - name: Add GlusterFS Repository
+      apt_repository:
+        repo: ppa:gluster/glusterfs-7
+
+    - name: Install the prerequisite packeage
+      apt:
+        name: "{{ packages }}"
+        state: present
+        update_cache: yes
+      vars:
+        packages:
+        - curl
+        - software-properties-common
+        - thin-provisioning-tools
+        - glusterfs-client
+
+    - name: cp id_rsa root
+      template:
+        src: /vagrant/ssh/id_rsa
+        dest: /root/.ssh/id_rsa
+        mode: '0600'
+        owner: root
+        group: root
+
+    - name: cp id_rsa vagrant
+      template:
+        src: /vagrant/ssh/id_rsa
+        dest: /home/vagrant/.ssh/id_rsa
+        mode: '0600'
+        owner: vagrant
+        group: vagrant
+
+    - name: download
+      get_url:
+        url: "{{ heketi_url }}/{{ heketi_tar }}"
+        dest: /home/vagrant/
+        mode: 0644
+        owner: vagrant
+        group: vagrant
+
+    - name: extract tar
+      unarchive:
+        src: "/home/vagrant/{{ heketi_tar }}"
+        dest: /home/vagrant
+        mode: 0755
+        owner: vagrant
+        group: vagrant
+
+    - name: cp heketi.json
+      template:
+        src: /vagrant/heketi/heketi.json
+        dest: /home/vagrant/heketi/heketi.json
+        mode: 0644
+        owner: root
+        group: root
+
+    - name: cp heketi.service for systemd
+      template:
+        src: /vagrant/systemd/heketi.service
+        dest: /lib/systemd/system/heketi.service
+        mode: 0644
+        owner: root
+        group: root
+
+    - name: reload systemd service 
+      systemd:
+        name: heketi
+        state: restarted
+
+    - name: Make sure a service is running
+      systemd:
+        name: heketi
+        state: started
+        enabled: yes

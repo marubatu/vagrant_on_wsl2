@@ -1,0 +1,46 @@
+- hosts: heketi
+  become: yes
+  vars:
+    - heketi: http://localhost:8080
+    - heketi_home: /home/vagrant/heketi
+    - heketi_cmd:  /home/vagrant/heketi/heketi-cli
+
+  tasks:
+    - name: create gluster cluster
+      command: "{{ heketi_cmd }} --server {{ heketi }} cluster create mycluster"
+      args:
+        chdir: "{{ heketi_home }}"
+      register: cluster_id
+
+    #- debug: var=cluster_id.stdout.split(":")[1].strip(' ')
+
+    - name: add node
+      command: "{{ heketi_cmd }} --server {{ heketi }} node add --cluster={{ cluster_id.stdout.split(\":\")[1].strip(' ') }} --zone=1 --management-host-name={{ item }} --storage-host-name={{ item }}"
+      args:
+        chdir: "{{ heketi_home }}"	
+      with_items:
+        - 172.20.1.21
+        - 172.20.1.22
+        - 172.20.1.23
+      register: node
+
+    #- debug: var=node.results[0].stdout_lines
+    #- debug: var=node.results[0].stdout_lines[1].split(":")[1].strip(' ')
+    #- debug: var=node.results[1].stdout_lines[1].split(":")[1].strip(' ')
+    #- debug: var=node.results[2].stdout_lines[1].split(":")[1].strip(' ')
+
+    - name: add device 1
+      command: "{{ heketi_cmd }} --server {{ heketi }} device add --name=/dev/sdc --node={{ node.results[0].stdout_lines[1].split(\":\")[1].strip(' ') }}"
+      args:
+        chdir: "{{ heketi_home }}"
+
+    - name: add device 2
+      command: "{{ heketi_cmd }} --server {{ heketi }} device add --name=/dev/sdc --node={{ node.results[1].stdout_lines[1].split(\":\")[1].strip(' ') }}"
+      args:
+        chdir: "{{ heketi_home }}"
+
+    - name: add device 3
+      command: "{{ heketi_cmd }} --server {{ heketi }} device add --name=/dev/sdc --node={{ node.results[2].stdout_lines[1].split(\":\")[1].strip(' ') }}"
+      args:
+        chdir: "{{ heketi_home }}"      
+
